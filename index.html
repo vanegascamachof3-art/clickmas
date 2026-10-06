@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Click+ Final - Versión Limpia</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}
+body{background:#FFF7ED;color:#0A2A4A;padding-bottom:90px}
+.header{position:sticky;top:0;z-index:30;background:white;padding:10px 14px;border-bottom:1px solid #EEE;display:flex;align-items:center;justify-content:space-between}
+.logo{width:120px;height:auto;cursor:pointer}
+.dateTime{font-size:11px;color:#6B7280;text-align:right} .dateTime b{color:#0A2A4A;display:block;font-size:14px;font-weight:900}
+.carousel{position:relative;margin:12px;border-radius:18px;overflow:hidden;height:210px;background:#0A2A4A}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity 0.5s} .slide.active{opacity:1}
+.slide img{width:100%;height:100%;object-fit:cover}
+.slideContent{position:absolute;left:14px;bottom:14px;right:14px;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.8)}
+.slideContent h3{font-size:20px;font-weight:900} .slideContent p{font-size:13px}
+.badgeD{position:absolute;top:12px;right:12px;background:#FFD600;color:#0A2A4A;font-weight:900;padding:6px 12px;border-radius:10px} 
+.badgeP{position:absolute;top:12px;left:12px;background:white;color:#0A2A4A;font-weight:800;padding:5px 10px;border-radius:8px;font-size:11px}
+.dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px} .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.5)} .dot.active{background:white;width:20px;border-radius:4px}
+.searchWrap{padding:0 12px} .search{width:100%;padding:13px 18px;border-radius:24px;border:1px solid #E5E7EB;background:white;font-size:14px}
+.catWrap{padding:0 12px;overflow-x:auto;white-space:nowrap;margin-top:10px} .catWrap::-webkit-scrollbar{display:none}
+#catPills{display:flex;gap:8px} .pill{padding:8px 16px;border-radius:20px;border:1px solid #E5E7EB;background:#F3F4F6;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0} .pill.active{background:#FF6B00;color:white;border-color:#FF6B00;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px}
+.card{background:white;border-radius:16px;overflow:hidden;border:1px solid #EEE;position:relative;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.btn{padding:10px 14px;border-radius:12px;border:0;font-weight:800;cursor:pointer;width:100%} .btn-orange{background:#FF6B00;color:white} .btn-dark{background:#0A2A4A;color:white} .btn-white{background:white;border:1px solid #EEE;color:#0A2A4A}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #EEE;display:flex;z-index:20} .bitem{flex:1;text-align:center;padding:8px 0;font-size:11px;color:#888;cursor:pointer} .bitem.active{color:#FF6B00;font-weight:800}
+.screen{display:none} .screen.active{display:block}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;z-index:50;overflow:auto;padding:12px;align-items:flex-start;justify-content:center} .modalBox{background:white;border-radius:18px;width:100%;max-width:580px;margin:20px auto;padding:16px;max-height:92vh;overflow:auto}
+.adminCard{background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:10px;margin:8px 0}
+input,textarea,select{width:100%;padding:10px;border:1px solid #DDD;border-radius:10px;margin:4px 0;font-size:14px}
+
+/* PASO 1 - Solo tarjetas cortitas 62px, nada mas */
+#homeGrid .card img{height:62px !important;object-fit:cover}
+.bottom{z-index:100 !important}
+.screen.active{display:block !important}
+#splash{position:fixed;inset:0;background:#FFF;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity .5s}
+#splash img{width:120px}
+#splashBar{height:3px;background:#FF6B00;width:0%;transition:width 1.2s;margin-top:8px;border-radius:2px}
+
+</style>
+</head>
+<body>
+<div id="splash"><div id="splashLogo" style="font-weight:900;font-size:30px"><span style="color:#FF6B00">Click</span><span style="color:#0A2A4A">+</span></div><div style="width:90px;background:#EEE;height:3px;border-radius:2px;margin-top:8px;overflow:hidden"><div id="splashBar"></div></div></div>
+
+<div class="header">
+<div id="logo" class="logo" style="font-weight:900;font-size:24px;cursor:pointer"><span style="color:#FF6B00">Click</span><span style="color:#0A2A4A">+</span></div>
+<div class="dateTime"><b id="dateText">Vie 2 Oct</b><span id="timeText">5:59 PM</span></div>
+</div>
+
+<div class="carousel" id="carousel"></div>
+
+<div class="searchWrap"><input id="search" class="search" placeholder="🔍 Buscar platos, restaurantes..."></div>
+
+<div class="catWrap"><div id="catPills"></div></div>
+
+<div id="sInicio" class="screen active"><div id="homeGrid" class="grid2"></div></div>
+
+<div id="sOfertas" class="screen"><div style="padding:14px"><h2>🔥 Ofertas y Promos</h2><p style="color:#666;font-size:13px"><span id="countActivas"></span></p><div style="margin-top:8px"><span class="pill active" id="pTodas" onclick="setFilter('todas')">Todas</span><span class="pill" id="pComida" onclick="setFilter('comida')">Comida (14)</span><span class="pill" id="pComercio" onclick="setFilter('comercio')">Comercios (6)</span></div></div><div id="ofertasGrid" class="grid2"></div></div>
+
+<div id="sCarrito" class="screen" style="padding:14px">
+<h2>🛒 Carrito</h2>
+<div id="carritoList" style="margin-top:10px"></div>
+<div style="background:white;border:1px solid #EEE;border-radius:12px;padding:12px;margin-top:12px">
+<div style="display:flex;justify-content:space-between;font-size:13px"><span>Subtotal</span><span id="cartSubtotal">$0</span></div>
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px"><span id="cartDomicilioLabel">Domicilio</span><span id="cartDomicilioVal">$0</span></div>
+<div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;margin-top:8px;border-top:1px solid #EEE;padding-top:8px"><span>Total</span><span id="carritoTotal">$0</span></div>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-white" style="color:#0A2A4A" onclick="go('inicio')">🛍️ Seguir comprando</button><button class="btn btn-orange" onclick="openConfirmModal()">Confirmar</button></div>
+</div>
+
+<div id="sDomi" class="screen">
+<div class="carousel" id="domiCarousel1" style="margin:12px"></div>
+<div style="padding:0 14px 6px"><h2 style="font-size:18px;font-weight:900">🛵 Domicilios y mensajeros</h2><p style="font-size:12px;color:#6B7280">Contacta directo para mandados, encargos o domicilios</p></div>
+<div id="domiList1" style="padding:0 12px"></div>
+<div class="carousel" id="domiCarousel2" style="margin:12px"></div>
+<div id="domiList2" style="padding:0 12px 20px"></div>
+</div>
+
+<div class="bottom"><div class="bitem active" id="bInicio" onclick="go('inicio')">🏠<br>Inicio</div><div class="bitem" id="bOfertas" onclick="go('ofertas')">🔥<br>Ofertas</div><div class="bitem" id="bCarrito" onclick="go('carrito')">🛒<br>Carrito <span id="cartBadge">0</span></div><div class="bitem" id="bDomi" onclick="go('domi')">🏍️<br>Domi</div></div>
+
+<div id="dishModal" class="modal"><div class="modalBox"><div style="display:flex;justify-content:space-between"><h3 id="dishModalName">Plato</h3><button onclick="closeDishModal()" style="border:0;background:#EEE;padding:6px 10px;border-radius:8px">✕</button></div><img id="dishModalImg" src="" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin:10px 0"><p id="dishModalIng" style="color:#666;font-size:13px"></p><p id="dishModalPrice" style="font-weight:900;color:#FF6B00;margin:8px 0"></p><div style="display:flex;gap:10px;margin:10px 0"><button class="btn btn-white" style="width:50px" onclick="changeQty(-1)">-</button><span id="modalQty" style="font-weight:900">1</span><button class="btn btn-white" style="width:50px" onclick="changeQty(1)">+</button><button class="btn btn-orange" style="flex:1" onclick="confirmAddCart()">Agregar 🛒</button></div></div></div>
+
+<div id="comercioModal" class="modal"><div class="modalBox" style="padding:0;overflow:hidden;max-width:420px"><div style="position:relative"><img id="comercioModalImg" src="" style="width:100%;height:260px;object-fit:cover;display:block"><div style="position:absolute;top:12px;left:12px;display:flex;gap:6px"><span id="comercioModalBadgeIzq" style="background:#0A2A4A;color:white;padding:6px 10px;border-radius:10px;font-size:11px;font-weight:900;display:none"></span><span id="comercioModalBadgeDer" style="background:#FFD600;color:#0A2A4A;padding:6px 10px;border-radius:10px;font-size:11px;font-weight:900;display:none"></span></div><button onclick="closeComercioModal()" style="position:absolute;top:12px;right:12px;border:0;background:rgba(0,0,0,0.6);color:white;width:36px;height:36px;border-radius:50%;font-weight:900">✕</button><div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 60%)"></div><div style="position:absolute;bottom:12px;left:14px;right:14px"><h2 id="comercioModalNombre" style="color:white;font-size:20px;font-weight:900;line-height:1.2;text-shadow:0 2px 8px rgba(0,0,0,0.8)"></h2><p id="comercioModalOferta" style="color:#FFD600;font-weight:800;font-size:15px;margin-top:4px;text-shadow:0 1px 6px rgba(0,0,0,0.8)"></p></div></div><div style="padding:14px"><div style="display:flex;align-items:center;gap:8px;background:#FFF7ED;border:1px solid #FFE4B5;padding:10px 12px;border-radius:12px"><span style="font-size:18px">🕒</span><span id="comercioModalHorario" style="font-size:13px;font-weight:700;color:#0A2A4A"></span></div><div id="comercioModalDescWrap" style="margin-top:10px;display:none"><p id="comercioModalDesc" style="color:#666;font-size:13px;line-height:1.4"></p></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-white" style="flex:1" onclick="closeComercioModal()">Cerrar</button><a id="comercioModalTelLink" href="tel:" style="flex:1;text-decoration:none"><button class="btn btn-orange" style="width:100%;padding:14px;font-size:15px">📞 Llamar ahora</button></a></div><p style="font-size:10px;color:#999;text-align:center;margin-top:8px">Toca Llamar para abrir el marcador con el número del comercio</p></div></div></div>
+
+<div id="modalPass" class="modal"><div class="modalBox" style="text-align:center;max-width:360px"><h3>🔒 Panel Admin</h3><p style="font-size:12px;color:#666;margin-top:6px">Ingresa la clave para entrar</p><input id="passInput" type="password" placeholder="Clave admin" style="margin-top:12px;text-align:center;font-size:18px;letter-spacing:2px"><div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-white" onclick="closePassModal()">Cancelar</button><button class="btn btn-orange" onclick="checkPass()">Entrar</button></div><p style="font-size:10px;color:#AAA;margin-top:8px">Clave por defecto: Click123</p></div></div>
+
+<div id="modalAdmin" class="modal"><div class="modalBox"><div style="display:flex;justify-content:space-between"><h3>⚙️ Panel Admin</h3><button onclick="closeAdmin()" style="border:0;background:#EEE;padding:6px 10px;border-radius:8px">✕</button></div>
+<div style="margin:10px 0;display:flex;gap:6px;flex-wrap:wrap"><span class="pill active" id="atBanners" onclick="setATab('banners')">🎠 Banners</span><span class="pill" id="atPlatos" onclick="setATab('platos')">🍽️ Platos</span><span class="pill" id="atHorarios" onclick="setATab('horarios')">🕒 Horarios</span><span class="pill" id="atOfertas" onclick="setATab('ofertas')">🔥 Ofertas</span><span class="pill" id="atDomi" onclick="setATab('domi')">🏍️ Domi</span><span class="pill" id="atDomiBanners" onclick="setATab('domiBanners')">🖼️ Banner Domi</span><span class="pill" id="atClave" onclick="setATab('clave')">🔑 Clave</span></div>
+<div id="adminContent"></div><div style="margin-top:16px;border-top:1px solid #EEE;padding-top:12px"><button class="btn btn-dark" onclick="exportHostingFile()">📤 Generar archivo para Netlify/hosting</button><p style="font-size:10px;color:#888;text-align:center;margin-top:6px">Descarga index.html con todos tus cambios para subir a Netlify o hosting real</p></div><button class="btn btn-white" style="margin-top:12px" onclick="closeAdmin()">Cerrar</button></div></div>
+
+<div id="modalCambio" class="modal"><div class="modalBox" style="text-align:center"><h3>¿Cambiar de restaurante?</h3><p style="font-size:13px;color:#666;margin-top:6px">Ya tienes platos de <b id="cambioActual"></b> en el carrito. Si agregas este plato se borrará lo que ya tienes. Solo puedes pedir de un restaurante a la vez.</p><div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-white" onclick="doCambio(false)">Cancelar</button><button class="btn btn-orange" onclick="doCambio(true)">Sí, reemplazar</button></div></div></div>
+
+<div id="modalConfirm" class="modal"><div class="modalBox">
+<div style="display:flex;justify-content:space-between;align-items:center"><h3>Confirmar pedido</h3><button onclick="closeConfirmModal()" style="border:0;background:#EEE;padding:6px 10px;border-radius:8px">✕</button></div>
+<div style="margin-top:12px">
+<label>Nombre</label><input id="confNombre" placeholder="Tu nombre completo">
+<label>Teléfono</label><div style="display:flex;gap:6px"><span style="background:#F3F4F6;border:1px solid #DDD;border-radius:10px;padding:10px;font-weight:800">57</span><input id="confTel" placeholder="3001234567 - 10 dígitos" type="tel" maxlength="10"></div>
+<label style="margin-top:8px;display:block">Entrega</label>
+<div style="display:flex;gap:8px;margin:6px 0"><label style="flex:1;display:flex;align-items:center;gap:6px;background:white;border:1px solid #E5E7EB;padding:10px;border-radius:10px;cursor:pointer"><input type="radio" name="entrega" value="domicilio" checked onchange="toggleDireccion()"> Con domicilio <span style="margin-left:auto;font-size:11px;color:#FF6B00" id="labelDomiCost">+$3.000</span></label><label style="flex:1;display:flex;align-items:center;gap:6px;background:white;border:1px solid #E5E7EB;padding:10px;border-radius:10px;cursor:pointer"><input type="radio" name="entrega" value="recoge" onchange="toggleDireccion()"> Recojo en local</label></div>
+<div id="wrapDireccion"><label>Dirección</label><input id="confDir" placeholder="Barrio, calle, referencia"></div>
+<label style="margin-top:8px;display:block">Forma de pago</label>
+<div style="display:flex;gap:8px;margin:6px 0"><label style="flex:1;display:flex;align-items:center;gap:6px;background:white;border:1px solid #E5E7EB;padding:10px;border-radius:10px;cursor:pointer"><input type="radio" name="pago" value="Efectivo" checked> Efectivo</label><label style="flex:1;display:flex;align-items:center;gap:6px;background:white;border:1px solid #E5E7EB;padding:10px;border-radius:10px;cursor:pointer"><input type="radio" name="pago" value="Transferencia"> Transferencia</label></div>
+<label>Nota</label><textarea id="confNota" placeholder="Vueltas para..$, llamar antes de.. entrar por.. con salsa, sin picante.." rows="3"></textarea>
+<div style="background:#0A2A4A;color:white;border-radius:12px;padding:12px;margin-top:12px">
+<div style="display:flex;justify-content:space-between;font-size:13px;opacity:0.8"><span>Subtotal</span><span id="confSubtotal">$0</span></div>
+<div style="display:flex;justify-content:space-between;font-size:13px;opacity:0.8;margin-top:4px"><span id="confDomiLabel">Domicilio</span><span id="confDomiVal">$3.000</span></div>
+<div style="display:flex;justify-content:space-between;font-weight:900;font-size:18px;margin-top:8px;border-top:1px solid rgba(255,255,255,0.2);padding-top:8px"><span>Total a pagar</span><span id="confTotal">$0</span></div>
+</div>
+<label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;background:#FFF7ED;border:1px solid #FFE4B5;padding:10px;border-radius:10px;cursor:pointer"><input type="checkbox" id="confCheck" style="width:18px;height:18px;margin-top:2px"><span style="font-size:13px">Confirmo que mi compra y mis datos son correctos.</span></label>
+<div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-white" onclick="cancelarConfirm()">Cancelar</button><button class="btn btn-orange" onclick="enviarPedido()">Enviar</button></div>
+</div>
+</div></div>
+
+<script>
+const defaultWeek={lunes:{open:"10:00",close:"22:00",closed:false},martes:{open:"10:00",close:"22:00",closed:false},miercoles:{open:"10:00",close:"22:00",closed:false},jueves:{open:"10:00",close:"22:00",closed:false},viernes:{open:"10:00",close:"23:00",closed:false},sabado:{open:"11:00",close:"23:00",closed:false},domingo:{open:"11:00",close:"21:00",closed:false},festivos:{open:"11:00",close:"21:00",closed:false}};
+
+const defaultSlides=[
+{id:1,title:"Parrillada Completa",subtitle:"Para compartir, 2 personas",discount:"-20%",promoText:"PROMO ACTIVA",image:"https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:2,title:"Pizza Pepperoni XL",subtitle:"Masa madre + pepperoni premium",discount:"-30%",promoText:"PROMO ACTIVA",image:"https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:3,title:"Combo Doble Smash",subtitle:"2 burgers + papas + bebida",discount:"-30%",promoText:"PROMO ACTIVA",image:"https://images.unsplash.com/photo-1568909344668-7c749659a591?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:4,title:"Crunchy Fried Box",subtitle:"Pollo crocante + papas + dips",discount:"-25%",promoText:"PROMO ACTIVA",image:"https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:5,title:"Burger Clásica Click",subtitle:"La favorita de la casa",discount:"-30%",promoText:"PROMO ACTIVA",image:"https://images.unsplash.com/photo-1594212699903-ec8a47e0d14a?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+];
+
+const defaultDishes=[
+{id:1,restaurant:"EL RANCHO",name:"Combo Doble Smash",price:18900,ingredients:"Doble carne 180g, cheddar x4, bacon",category:"Combos",whatsapp:"573001234567",telefono:"573001234567",image:"https://images.unsplash.com/photo-1568909344668-6f14a07b56a0?w=400&auto=format&fit=crop",schedule:JSON.parse(JSON.stringify(defaultWeek))},
+{id:2,restaurant:"POLLO KING",name:"Crunchy Fried Box",price:15900,ingredients:"Pollo frito crujiente, papas rústicas",category:"Fritos",image:"https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&auto=format&fit=crop",schedule:JSON.parse(JSON.stringify(defaultWeek))},
+{id:3,restaurant:"NONNA PIZZA",name:"Pizza Pepperoni XL",price:14500,ingredients:"Pepperoni, mozzarella",category:"Pizzas",image:"https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&auto=format&fit=crop",schedule:JSON.parse(JSON.stringify(defaultWeek))},
+{id:4,restaurant:"BRASA & CARBÓN",name:"Entraña a la Parrilla",price:22400,ingredients:"Entraña 350g, chimichurri",category:"Parrilla",image:"https://images.unsplash.com/photo-1544025162-d76694265947?w=400&auto=format&fit=crop",schedule:JSON.parse(JSON.stringify(defaultWeek))},
+{id:5,restaurant:"EL RANCHO",name:"Sancocho Trifásico",price:18000,ingredients:"Carne, pollo, cerdo",category:"Sopas",image:"https://images.unsplash.com/photo-1547592180-85f173990554?w=400&auto=format&fit=crop",schedule:JSON.parse(JSON.stringify(defaultWeek))},
+{id:6,restaurant:"EL RANCHO",name:"Bandeja Paisa",price:22000,ingredients:"Frijoles, arroz, chicharrón",category:"Combos",image:"https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop",schedule:JSON.parse(JSON.stringify(defaultWeek))},
+];
+
+const defaultPromos=[
+{ tipo:'comida', restaurante:'El Rancho', promo:'Combo Familiar', badge:'-20%', precioOrig:40000, precioOferta:32000, img:'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400', activa:true },
+{ tipo:'comida', restaurante:'Nonna Pizza', promo:'2x1 Pizzas Medianas', badge:'2x1', precioOrig:36000, precioOferta:18000, img:'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400', activa:true },
+{ tipo:'comida', restaurante:'Brasa Viva', promo:'Pollo Entero + Papas', badge:'-15%', precioOrig:45000, precioOferta:38250, img:'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=400', activa:true },
+{ tipo:'comida', restaurante:'El Rancho', promo:'Bandeja Paisa', badge:'-10%', precioOrig:25000, precioOferta:22500, img:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400', activa:true },
+{ tipo:'comercio', comercio:'Barbería El Estilo', oferta:'Corte + Barba $12k', desc:'Hoy hasta 8pm', icono:'💈', whatsapp:'573001234567', img:'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600', activa:true, badgeIzq:'Este mes', badgeDer:'15% Desc', horarioCom:'De L-S 8am-8pm D-🔒 F-8am-6pm', telefono:'573001234567' },
+{ tipo:'comercio', comercio:'Boutique La Moda', oferta:'Blusas 2x $35k', desc:'Tallas S-M-L', icono:'👕', whatsapp:'573001234567', img:'https://images.unsplash.com/photo-1445205170230-053b83016050?w=600', activa:true, badgeIzq:'Promo', badgeDer:'2x $35k', horarioCom:'L-S 9am-7pm D 10am-5pm', telefono:'573001234567' },
+];
+
+const defaultDomi=[
+{ id:1, nombre:'Héctor Pérez', telefono:'3101234567', horarioLV:'L-V: 7am a 12pm', horarioSab:'Sáb: 8am-6pm', horarioDom:'Dom. Fest: 8am-10pm', activo:true },
+{ id:2, nombre:'Carlos Moto', telefono:'3112345678', horarioLV:'L-V: 6am a 10pm', horarioSab:'Sáb: 6am-10pm', horarioDom:'Dom. Fest: 7am-9pm', activo:true },
+{ id:3, nombre:'Luis Mensajero', telefono:'3123456789', horarioLV:'L-V: 8am a 6pm', horarioSab:'Sáb: 8am-4pm', horarioDom:'Dom. Fest: 8am-2pm', activo:true },
+{ id:4, nombre:'Ana Express', telefono:'3134567890', horarioLV:'L-V: 7am a 7pm', horarioSab:'Sáb: 7am-5pm', horarioDom:'Dom. Fest: 9am-5pm', activo:true },
+{ id:5, nombre:'Jorge Rápido', telefono:'3145678901', horarioLV:'L-V: 6am a 12pm', horarioSab:'Sáb: 6am-8pm', horarioDom:'Dom. Fest: 8am-10pm', activo:true },
+];
+const defaultDomiBanners2=[
+{id:4,title:"¡Tu marca aquí abajo!",subtitle:"Segundo espacio publicidad - $20k mes",discount:"PUBLICIDAD",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1519125323398-675f0ddb6308?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:5,title:"Entregas rápidas",subtitle:"Anuncia tu comercio",discount:"24H",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1529070538774-1843cb3265df?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:6,title:"Espacio Premium",subtitle:"Suscripción mensual",discount:"-20%",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+];
+const defaultDomiBanners=[
+{id:1,title:"¡Publicita aquí!",subtitle:"Espacio para tu negocio - $20k mes",discount:"PUBLICIDAD",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:2,title:"Domicilios 24/7",subtitle:"Llegamos a todo el pueblo",discount:"24H",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+{id:3,title:"Anuncia tu negocio",subtitle:"Suscripción mensual",discount:"-30%",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800&auto=format&fit=crop",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true},
+];
+
+
+let slides = JSON.parse(JSON.stringify(defaultSlides));
+let dishes = JSON.parse(JSON.stringify(defaultDishes));
+let promos = JSON.parse(JSON.stringify(defaultPromos));
+let domiList = JSON.parse(JSON.stringify(defaultDomi));
+let domiBanners = JSON.parse(JSON.stringify(defaultDomiBanners));
+let domiBanners2 = JSON.parse(JSON.stringify(defaultDomiBanners2));
+try{
+  const s = JSON.parse(localStorage.getItem('click_slides_clean')||'null');
+  if(s && s.length>0) slides=s;
+  const d = JSON.parse(localStorage.getItem('click_dishes_clean')||'null');
+  if(d && d.length>0) dishes=d;
+  const p = JSON.parse(localStorage.getItem('click_promos_clean')||'null');
+  if(p && p.length>0) promos=p;
+  const dm = JSON.parse(localStorage.getItem('click_domi_clean')||'null');
+  if(dm && dm.length>0) domiList=dm;
+  const dmb = JSON.parse(localStorage.getItem('click_domi_banners')||'null');
+  if(dmb && dmb.length>0) domiBanners=dmb;
+  const dmb2 = JSON.parse(localStorage.getItem('click_domi_banners2')||'null');
+  if(dmb2 && dmb2.length>0) domiBanners2=dmb2;
+}catch(e){}
+
+let carrito = JSON.parse(localStorage.getItem('click_carrito')||'[]');
+let restauranteActual = localStorage.getItem('click_restaurante')||null;
+let pendingDish=null; let filter='todas'; let aTab='banners'; let modalDish=null; let modalQty=1;
+
+function saveAll(){ localStorage.setItem('click_slides_clean', JSON.stringify(slides)); localStorage.setItem('click_dishes_clean', JSON.stringify(dishes)); localStorage.setItem('click_promos_clean', JSON.stringify(promos)); localStorage.setItem('click_domi_clean', JSON.stringify(domiList)); localStorage.setItem('click_domi_banners', JSON.stringify(domiBanners)); localStorage.setItem('click_domi_banners2', JSON.stringify(domiBanners2)); localStorage.setItem('click_carrito', JSON.stringify(carrito)); if(restauranteActual) localStorage.setItem('click_restaurante', restauranteActual); else localStorage.removeItem('click_restaurante'); }
+
+function renderCarousel(){ const cont=document.getElementById('carousel'); if(!cont) return; cont.innerHTML=''; slides.forEach((s,i)=>{ 
+  const showP = (typeof s.showPromo==='undefined'? !!s.promoText : s.showPromo) && s.promoText;
+  const showD = (typeof s.showDiscount==='undefined'? !!s.discount : s.showDiscount) && s.discount;
+  const showT = (typeof s.showTitle==='undefined'? !!s.title : s.showTitle) && s.title;
+  const showS = (typeof s.showSubtitle==='undefined'? !!s.subtitle : s.showSubtitle) && s.subtitle;
+  const div=document.createElement('div'); div.className='slide'+(i===0?' active':''); 
+  div.innerHTML='<img src="'+s.image+'" onerror="this.src=\'https://picsum.photos/seed/'+s.id+'/800/400\'">'+
+    (showP?'<div class="badgeP">'+s.promoText+'</div>':'')+
+    (showD?'<div class="badgeD">'+s.discount+'</div>':'')+
+    '<div class="slideContent">'+(showT?'<h3>'+s.title+'</h3>':'')+(showS?'<p>'+s.subtitle+'</p>':'')+'</div>'; 
+  cont.appendChild(div); 
+}); const dots=document.createElement('div'); dots.className='dots'; slides.forEach((_,i)=>{ const d=document.createElement('div'); d.className='dot'+(i===0?' active':''); dots.appendChild(d); }); cont.appendChild(dots); }
+function renderDomiCarousels(){ const map={'domiCarousel1': (typeof domiBanners!=='undefined' && domiBanners.length>0) ? domiBanners : slides.slice(0,3), 'domiCarousel2': (typeof domiBanners2!=='undefined' && domiBanners2.length>0) ? domiBanners2 : (typeof domiBanners!=='undefined' && domiBanners.length>0 ? domiBanners : slides.slice(0,3)) }; ['domiCarousel1','domiCarousel2'].forEach(cid=>{ const cont=document.getElementById(cid); if(!cont) return; cont.innerHTML=''; const useSlides=map[cid]; useSlides.forEach((s,i)=>{ const div=document.createElement('div'); div.className='slide'+(i===0?' active':''); div.innerHTML='<img src="'+s.image+'" onerror="this.src=\'https://picsum.photos/seed/'+s.id+'/800/400\'"><div class="badgeP">Publicidad</div><div class="slideContent"><h3>'+s.title+'</h3><p>'+s.subtitle+'</p></div>'; cont.appendChild(div); }); const dots=document.createElement('div'); dots.className='dots'; useSlides.forEach((_,i)=>{ const d=document.createElement('div'); d.className='dot'+(i===0?' active':''); dots.appendChild(d); }); cont.appendChild(dots); }); }
+function shuffleArray(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; } return arr; }
+function getCleanTel(t){ let n=(t||'').toString().replace(/[^0-9]/g,''); if(n.startsWith('57')) return '+'+n; if(n.length===10) return '+57'+n; return '+57'+n; }
+function renderDomi(){ renderDomiCarousels(); const list1=document.getElementById('domiList1'); const list2=document.getElementById('domiList2'); if(!list1||!list2) return; list1.innerHTML=''; list2.innerHTML=''; const activosBase=domiList.filter(d=>d.activo); const activos=shuffleArray(activosBase); const mitad=Math.ceil(activos.length/2); activos.forEach((dom,i)=>{ const cardHtml=`<div style="background:white;border:1px solid #E5E7EB;border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04)"><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:8px"><div style="width:44px;height:44px;border-radius:50%;background:#FFF7ED;display:flex;align-items:center;justify-content:center;font-size:22px">🏍️</div><div><div style="font-weight:900;font-size:15px">${dom.nombre}</div><div style="font-size:12px;color:#6B7280">Tel: ${dom.telefono}</div></div></div></div><div style="margin-top:10px;background:#F9FAFB;border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.5"><div>🕒 ${dom.horarioLV}</div><div>🕒 ${dom.horarioSab}</div><div>🕒 ${dom.horarioDom}</div></div><a href="tel:${getCleanTel(dom.telefono)}" style="display:block;text-decoration:none;margin-top:10px"><button class="btn btn-orange" style="padding:12px">📞 Llamar</button></a></div>`; if(i<mitad) list1.innerHTML+=cardHtml; else list2.innerHTML+=cardHtml; }); if(activos.length===0){ list1.innerHTML='<p style="text-align:center;color:#888;padding:20px">No hay domiciliarios disponibles por ahora</p>'; } }
+
+function renderCategories(){ const customCats=JSON.parse(localStorage.getItem('click_custom_cats')||'[]'); const cats=['Todos',...new Set([...dishes.map(d=>d.category), ...customCats])]; const cont=document.getElementById('catPills'); cont.innerHTML=''; cats.forEach(cat=>{ const span=document.createElement('span'); span.className='pill'+(cat==='Todos'?' active':''); span.textContent=cat; span.onclick=()=>{ document.querySelectorAll('#catPills .pill').forEach(p=>p.classList.remove('active')); span.classList.add('active'); renderHome(cat); }; cont.appendChild(span); }); }
+
+function renderHome(activeCat='Todos'){
+ const grid=document.getElementById('homeGrid'); if(!grid) return; grid.innerHTML='';
+ let list=dishes;
+ const rawQ=document.getElementById('search').value.trim();
+ const q=rawQ.toLowerCase();
+ if(activeCat!=='Todos') list=list.filter(d=>d.category===activeCat);
+ if(q){
+   // extraer numero para busqueda por precio: 20000, 20.000, $20000
+   const numStr = rawQ.replace(/[^0-9]/g,'');
+   const num = numStr ? parseInt(numStr,10) : null;
+   list=list.filter(d=>{
+     const hayTexto = (d.name+' '+d.restaurant+' '+(d.ingredients||'')+' '+d.category+' '+d.price).toLowerCase().includes(q);
+     if(hayTexto) return true;
+     // si escribio un numero, buscar por precio exacto o hasta ese precio
+     if(num!==null && !isNaN(num) && num>=1000){
+       // Si busca "20000" mostrar platos <= 20000 y tambien si precio contiene esos digitos
+       if(d.price <= num) return true;
+       if(String(d.price).includes(numStr)) return true;
+     }
+     return false;
+   });
+ }
+ list.forEach(d=>{
+  const st=isDishOpen(d);
+  const isOpen=st.open;
+  const badgeText=isOpen ? 'ABIERTO' : (st.reason || 'CERRADO');
+  const badgeStyle=isOpen ? 'background:#DCFCE7;color:#166534;' : 'background:#FEE2E2;color:#991B1B;';
+  const card=document.createElement('div'); card.className='card';
+  card.innerHTML='<div style="position:relative"><img src="'+d.image+'" style="width:100%;height:110px;object-fit:cover" onerror="this.src=\'https://picsum.photos/seed/dish'+d.id+'/400/300\'"><div style="position:absolute;top:8px;left:8px;'+badgeStyle+'padding:3px 6px;border-radius:6px;font-size:9px;font-weight:800">'+badgeText+'</div></div><div style="padding:8px"><div style="font-size:10px;color:#888">'+d.restaurant+'</div><div style="font-weight:800;font-size:13px">'+d.name+'</div><div style="font-size:11px;color:#666">'+d.ingredients+'</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="color:#FF6B00;font-weight:900">$'+d.price.toLocaleString()+'</span><button class="btn '+(isOpen?'btn-orange':'')+'" style="width:auto;padding:6px 10px;font-size:12px;'+(isOpen?'':'background:#E5E7EB;color:#9CA3AF;cursor:not-allowed')+'" '+(isOpen?'':'disabled')+' onclick="openDish('+d.id+')">'+(isOpen?'+':'✕')+'</button></div></div>';
+  grid.appendChild(card);
+ });
+}
+
+function renderOfertas(){ 
+  const grid=document.getElementById('ofertasGrid'); grid.innerHTML=''; 
+  let list=promos.filter(p=>p.activa); 
+  if(filter!=='todas') list=list.filter(p=>p.tipo===filter); 
+  document.getElementById('countActivas').textContent=list.length+' activas'; 
+  list.forEach(p=>{ 
+    const idx=promos.indexOf(p); 
+    const card=document.createElement('div'); card.className='card'; 
+    if(p.tipo==='comida'){ 
+      card.innerHTML='<div style="position:relative"><img src="'+(p.img||'https://picsum.photos/seed/offer'+idx+'/400/300')+'" style="width:100%;height:120px;object-fit:cover"><div style="position:absolute;top:8px;left:8px;background:#FFD600;color:#0A2A4A;font-weight:900;padding:4px 8px;border-radius:8px;font-size:11px">'+(p.badge||'')+'</div></div><div style="padding:10px"><div style="font-size:10px;color:#888">'+p.restaurante+'</div><div style="font-weight:800;font-size:13px">'+p.promo+'</div><div><span style="text-decoration:line-through;color:#999;font-size:11px">$'+p.precioOrig+'</span> <span style="color:#FF6B00;font-weight:900">$'+p.precioOferta+'</span></div><button class="btn btn-orange" style="margin-top:6px;padding:8px;font-size:13px" onclick="addPromoCart('+idx+')">Agregar 🛒</button></div>'; 
+    } else { 
+      // COMERCIO - OVERLAY: foto fondo + badges arriba + textos abajo izq + Llamar (no tapa imagen)
+      const tel = (p.telefono||p.whatsapp||'').replace(/[^0-9+]/g,'');
+      const imgUrl = p.img||'';
+      const badgeIzq = p.badgeIzq||'';
+      const badgeDer = p.badgeDer||'';
+      const titulo = p.comercio||'Comercio';
+      const subt = p.oferta||'';
+      const hor = p.horarioCom||'';
+      const queVende = p.desc||'';
+      if(imgUrl){
+        card.style.overflow='hidden'; card.style.cursor='pointer';
+        card.setAttribute('onclick','openComercio('+idx+')');
+        card.innerHTML='<div style="position:relative;width:100%;height:220px;background:#111"><img src="'+imgUrl+'" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src=\'https://picsum.photos/seed/comercio'+idx+'/600/400\'">'+
+          '<div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.05) 85%)"></div>'+
+          (badgeIzq?'<div style="position:absolute;top:10px;left:10px;background:#0A2A4A;color:white;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:800">'+badgeIzq+'</div>':'')+
+          (badgeDer?'<div style="position:absolute;top:10px;right:10px;background:#FFD600;color:#0A2A4A;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:900">'+badgeDer+'</div>':'')+
+          '<div style="position:absolute;bottom:10px;left:10px;right:12px;display:block">'+
+              '<div style="color:white;font-weight:900;font-size:14px;line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+titulo+'</div>'+
+              (subt?'<div style="color:#FFD600;font-weight:800;font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+subt+'</div>':'')+
+          '</div>'+
+        '</div>';
+      } else {
+        card.style.background='#0A2A4A'; card.style.color='white'; card.style.cursor='pointer'; card.setAttribute('onclick','openComercio('+idx+')');
+        card.innerHTML='<div style="padding:12px"><div style="font-size:22px">'+(p.icono||'🏪')+'</div><div style="font-weight:800">'+titulo+'</div><div style="color:#FFD600;font-weight:700;font-size:13px">'+subt+'</div><div style="font-size:11px;color:#D1D5DB">'+hor+'</div><div style="font-size:10px;color:#94A3B8;margin-top:6px">Toca para ver →</div></div>';
+      }
+    } 
+    grid.appendChild(card); 
+  }); 
+}
+
+function go(s){ document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active')); document.getElementById('s'+s.charAt(0).toUpperCase()+s.slice(1)).classList.add('active'); document.querySelectorAll('.bitem').forEach(e=>e.classList.remove('active')); document.getElementById('b'+s.charAt(0).toUpperCase()+s.slice(1)).classList.add('active'); if(s==='ofertas') renderOfertas(); if(s==='inicio') renderHome(); if(s==='carrito') renderCarrito(); if(s==='domi') renderDomi(); }
+function setFilter(f){ filter=f; document.getElementById('pTodas').classList.toggle('active', f==='todas'); document.getElementById('pComida').classList.toggle('active', f==='comida'); document.getElementById('pComercio').classList.toggle('active', f==='comercio'); renderOfertas(); }
+
+function openDish(id){
+ const d=dishes.find(x=>x.id===id);
+ const st=isDishOpen(d);
+ if(!st.open){
+   alert(d.restaurant+' - '+d.name+' está '+st.reason+' hoy. No se puede pedir por ahora.');
+   return;
+ }
+ if(carrito.length>0 && restauranteActual && d.restaurant!==restauranteActual){ pendingDish=d; document.getElementById('cambioActual').textContent=restauranteActual; document.getElementById('modalCambio').style.display='flex'; return; } modalDish=d; modalQty=1; document.getElementById('dishModalName').textContent=d.name+' - '+d.restaurant; document.getElementById('dishModalImg').src=d.image; document.getElementById('dishModalIng').textContent=d.ingredients; document.getElementById('dishModalPrice').textContent='$'+d.price.toLocaleString(); document.getElementById('modalQty').textContent=modalQty; document.getElementById('dishModal').style.display='flex'; }
+function closeDishModal(){ document.getElementById('dishModal').style.display='none'; modalDish=null; }
+function openComercio(idx){
+  const p=promos[idx]; if(!p || p.tipo!=='comercio') return;
+  document.getElementById('comercioModalImg').src=p.img||'https://picsum.photos/seed/comercio'+idx+'/600/400';
+  document.getElementById('comercioModalNombre').textContent=p.comercio||'Comercio';
+  document.getElementById('comercioModalOferta').textContent=p.oferta||'';
+  const hor = p.horarioCom||'';
+      const queVende = p.desc||'';
+  document.getElementById('comercioModalHorario').textContent=hor||'Horario no especificado';
+  const descWrap=document.getElementById('comercioModalDescWrap');
+  if(queVende && queVende.trim()!==''){ document.getElementById('comercioModalDesc').textContent=queVende; descWrap.style.display='block'; } else { descWrap.style.display='none'; }
+  const badgeIzqEl=document.getElementById('comercioModalBadgeIzq');
+  const badgeDerEl=document.getElementById('comercioModalBadgeDer');
+  if(p.badgeIzq){ badgeIzqEl.textContent=p.badgeIzq; badgeIzqEl.style.display='block'; } else { badgeIzqEl.style.display='none'; }
+  if(p.badgeDer){ badgeDerEl.textContent=p.badgeDer; badgeDerEl.style.display='block'; } else { badgeDerEl.style.display='none'; }
+  
+  const tel=(p.telefono||p.whatsapp||'').replace(/[^0-9+]/g,'');
+  document.getElementById('comercioModalTelLink').href='tel:'+tel;
+  document.getElementById('comercioModal').style.display='flex';
+}
+function closeComercioModal(){ document.getElementById('comercioModal').style.display='none'; }
+
+function changeQty(d){ modalQty=Math.max(1, modalQty+d); document.getElementById('modalQty').textContent=modalQty; }
+function confirmAddCart(){ if(!modalDish) return; restauranteActual=modalDish.restaurant; const existing=carrito.find(c=>c.id===modalDish.id); if(existing) existing.qty+=modalQty; else carrito.push({id:modalDish.id, dish:modalDish, qty:modalQty}); saveAll(); updateBadge(); renderCarrito(); closeDishModal(); }
+function addPromoCart(idx){ const p=promos[idx]; const fakeDish={id:1000+idx, restaurant:p.restaurante, name:p.promo, price:p.precioOferta, ingredients:'', image:p.img, schedule:defaultWeek}; if(carrito.length>0 && restauranteActual && fakeDish.restaurant!==restauranteActual){ pendingDish=fakeDish; document.getElementById('cambioActual').textContent=restauranteActual; document.getElementById('modalCambio').style.display='flex'; return; } restauranteActual=fakeDish.restaurant; const existing=carrito.find(c=>c.id===fakeDish.id); if(existing) existing.qty+=1; else carrito.push({id:fakeDish.id, dish:fakeDish, qty:1}); saveAll(); updateBadge(); renderCarrito(); }
+function doCambio(si){ document.getElementById('modalCambio').style.display='none'; if(si && pendingDish){ carrito=[]; restauranteActual=null; saveAll(); if(pendingDish.id>=1000){ const idx=pendingDish.id-1000; const p=promos[idx]; const fakeDish={id:1000+idx, restaurant:p.restaurante, name:p.promo, price:p.precioOferta, ingredients:'', image:p.img, schedule:defaultWeek}; restauranteActual=fakeDish.restaurant; carrito.push({id:fakeDish.id, dish:fakeDish, qty:1}); saveAll(); updateBadge(); renderCarrito(); } else { restauranteActual=pendingDish.restaurant; carrito.push({id:pendingDish.id, dish:pendingDish, qty:1}); saveAll(); updateBadge(); renderCarrito(); } } pendingDish=null; }
+function updateBadge(){ document.getElementById('cartBadge').textContent=carrito.reduce((s,c)=>s+c.qty,0); }
+function removeCategory(cat){ if(!confirm('¿Eliminar categoría "'+cat+'"? Los platos con esa categoría pasarán a Combos.')) return; let cc=JSON.parse(localStorage.getItem('click_custom_cats')||'[]'); cc=cc.filter(c=>c!==cat); localStorage.setItem('click_custom_cats', JSON.stringify(cc)); dishes.forEach(d=>{ if(d.category===cat) d.category='Combos'; }); saveAll(); renderAdmin(); renderCategories(); renderHome(); }
+let domicilioCosto=3000;
+function renderCarrito(){ const list=document.getElementById('carritoList'); list.innerHTML=''; if(carrito.length===0){ list.innerHTML='<p style="color:#888;text-align:center;padding:20px">Tu carrito está vacío<br><small>Agrega platos del inicio</small></p>'; document.getElementById('cartSubtotal').textContent='$0'; document.getElementById('cartDomicilioVal').textContent='$0'; document.getElementById('carritoTotal').textContent='$0'; document.getElementById('confSubtotal').textContent='$0'; document.getElementById('confDomiVal').textContent='$0'; document.getElementById('confTotal').textContent='$0'; return; } let subtotal=0; carrito.forEach((c,i)=>{ subtotal+=c.dish.price*c.qty; const img=c.dish.image||'https://picsum.photos/seed/dish'+c.dish.id+'/100/100'; list.innerHTML+=`<div style="display:flex;gap:10px;padding:10px;background:white;border:1px solid #EEE;border-radius:12px;margin-bottom:8px;align-items:center"><img src="${img}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0" onerror="this.src='https://picsum.photos/seed/dish${c.dish.id}/100/100'"><div style="flex:1"><div style="font-size:10px;color:#888">${c.dish.restaurant}</div><div style="font-weight:800;font-size:13px">${c.dish.name}</div><div style="font-size:12px;color:#FF6B00;font-weight:700">$${(c.dish.price*c.qty).toLocaleString()} <span style="color:#888;font-weight:400">($${c.dish.price.toLocaleString()} c/u)</span></div></div><div style="display:flex;align-items:center;gap:6px"><button onclick="changeCartQty(${i},-1)" style="border:0;background:#F3F4F6;width:32px;height:32px;border-radius:8px;font-weight:800">-</button><span style="font-weight:800;min-width:20px;text-align:center">${c.qty}</span><button onclick="changeCartQty(${i},1)" style="border:0;background:#F3F4F6;width:32px;height:32px;border-radius:8px;font-weight:800">+</button><button onclick="removeCartItem(${i})" style="border:0;background:#FEE;color:#B00;width:28px;height:28px;border-radius:8px;margin-left:4px">✕</button></div></div>`; }); const entregaCheck=document.querySelector('#modalConfirm input[name="entrega"]:checked'); const domicilioActivo= entregaCheck ? entregaCheck.value==='domicilio' : true; const domi=domicilioActivo?domicilioCosto:0; document.getElementById('cartSubtotal').textContent='$'+subtotal.toLocaleString(); document.getElementById('cartDomicilioVal').textContent=domicilioActivo?('$'+domicilioCosto.toLocaleString()):'$0'; document.getElementById('cartDomicilioLabel').textContent=domicilioActivo?'Domicilio':'Recojo en local'; document.getElementById('carritoTotal').textContent='$'+(subtotal+domi).toLocaleString(); document.getElementById('labelDomiCost').textContent='+ $'+domicilioCosto.toLocaleString(); document.getElementById('confSubtotal').textContent='$'+subtotal.toLocaleString(); document.getElementById('confDomiVal').textContent=domicilioActivo?('$'+domicilioCosto.toLocaleString()):'$0'; document.getElementById('confDomiLabel').textContent=domicilioActivo?'Domicilio':'Recojo en local'; document.getElementById('confTotal').textContent='$'+(subtotal+domi).toLocaleString(); }
+function changeCartQty(i,d){ carrito[i].qty=Math.max(1, carrito[i].qty+d); saveAll(); updateBadge(); renderCarrito(); }
+function removeCartItem(i){ carrito.splice(i,1); if(carrito.length===0) restauranteActual=null; saveAll(); updateBadge(); renderCarrito(); }
+function vaciarCarrito(){ carrito=[]; restauranteActual=null; saveAll(); updateBadge(); renderCarrito(); }
+function vaciarCarritoConfirmado(){ if(carrito.length===0){ return; } if(!confirm('¿Vaciar carrito? Se borrarán todos los platos.')) return; vaciarCarrito(); }
+function vaciarCarritoGoHome(){ if(carrito.length>0 && !confirm('¿Cancelar pedido y volver al inicio? Se borrará el carrito.')) return; vaciarCarrito(); go('inicio'); }
+function openConfirmModal(){ if(carrito.length===0){ alert('Carrito vacío'); return; } const saved=JSON.parse(localStorage.getItem('click_cuenta')||'null'); if(saved){ document.getElementById('confNombre').value=saved.nombre||''; document.getElementById('confTel').value=(saved.wa||'').replace(/^57/,'').slice(-10); document.getElementById('confDir').value=saved.dir||''; } document.getElementById('modalConfirm').style.display='flex'; toggleDireccion(); renderCarrito(); }
+function closeConfirmModal(){ document.getElementById('modalConfirm').style.display='none'; }
+function toggleDireccion(){ const val=document.querySelector('input[name="entrega"]:checked')?.value; const wrap=document.getElementById('wrapDireccion'); if(val==='recoge'){ wrap.style.display='none'; } else { wrap.style.display='block'; } renderCarrito(); }
+function cancelarConfirm(){ if(!confirm('¿Cancelar pedido? Se borrará todo y volverás al inicio.')) return; document.getElementById('modalConfirm').style.display='none'; vaciarCarrito(); go('inicio'); }
+function getRestaurantWhatsApp(restName){
+  if(!restName) return '573001234567';
+  const name = restName.trim().toUpperCase();
+  // buscar en platos
+  const dishMatch = dishes.find(d=> (d.restaurant||'').toUpperCase()===name && (d.whatsapp||d.telefono));
+  if(dishMatch) return (dishMatch.whatsapp||dishMatch.telefono||'').replace(/[^0-9]/g,'').replace(/^0+/,'') || '573001234567';
+  // buscar en promos de comida
+  const promoMatch = promos.find(p=> p.tipo==='comida' && (p.restaurante||'').toUpperCase()===name && (p.whatsapp||p.telefono));
+  if(promoMatch) return (promoMatch.whatsapp||promoMatch.telefono||'').replace(/[^0-9]/g,'') || '573001234567';
+  // fallback por restaurante conocido (puedes editar estos numeros en Admin Platos)
+  const map={ 'EL RANCHO':'573001234567', 'POLLO KING':'573001234567', 'NONNA PIZZA':'573001234567', 'BRASA & CARBÓN':'573001234567', 'BRASA Y CARBON':'573001234567' };
+  if(map[name]) return map[name];
+  // si el restauranteActual tiene formato con numero guardado en localStorage custom
+  try{
+    const custom = JSON.parse(localStorage.getItem('click_restaurant_phones')||'{}');
+    if(custom[name]) return custom[name];
+  }catch(e){}
+  return '573001234567';
+}
+function enviarPedido(){ const nombre=document.getElementById('confNombre').value.trim(); let tel=document.getElementById('confTel').value.trim().replace(/\D/g,''); const dir=document.getElementById('confDir').value.trim(); const entrega=document.querySelector('input[name="entrega"]:checked')?.value; const pago=document.querySelector('input[name="pago"]:checked')?.value; const nota=document.getElementById('confNota').value.trim(); const check=document.getElementById('confCheck').checked; if(!nombre || nombre.length<3){ alert('Escribe tu nombre'); return; } if(!tel || tel.length!==10){ alert('Escribe tu teléfono de 10 dígitos'); return; } if(entrega==='domicilio' && !dir){ alert('Escribe tu dirección'); return; } if(!check){ alert('Debes confirmar que tu compra y tus datos son correctos'); return; } const telFull='57'+tel; localStorage.setItem('click_cuenta', JSON.stringify({nombre:nombre, dir:dir, wa:telFull})); let subtotal=carrito.reduce((s,c)=>s+c.dish.price*c.qty,0); let domi=entrega==='domicilio'?domicilioCosto:0; let total=subtotal+domi; let txt=`Hola ${restauranteActual}!%0AQuiero pedir en Click+:%0A%0A`; carrito.forEach(c=>{ txt+=`- ${c.dish.name} x${c.qty} - $${(c.dish.price*c.qty).toLocaleString()}%0A`; }); txt+=`%0ASubtotal: $${subtotal.toLocaleString()}%0A${entrega==='domicilio'?'Domicilio: $'+domicilioCosto.toLocaleString()+'%0A':'Recojo en local: $0%0A'}Total: $${total.toLocaleString()}%0A%0ANombre: ${encodeURIComponent(nombre)}%0ATel: ${telFull}%0AEntrega: ${entrega==='domicilio'?'Con domicilio':'Recojo en local'}%0A`; if(entrega==='domicilio') txt+=`Dirección: ${encodeURIComponent(dir)}%0A`; txt+=`Pago: ${pago}%0A`; if(nota) txt+=`Nota: ${encodeURIComponent(nota)}%0A`; const waRest = getRestaurantWhatsApp(restauranteActual); window.open('https://wa.me/'+waRest+'?text='+txt,'_blank'); document.getElementById('modalConfirm').style.display='none'; vaciarCarrito(); go('inicio'); }
+function checkout(){ openConfirmModal(); }
+
+let taps=0,lastTap=0; 
+function getAdminPass(){ return localStorage.getItem('click_admin_pass')||'Click123'; }
+function openPassModal(){ document.getElementById('passInput').value=''; document.getElementById('modalPass').style.display='flex'; setTimeout(()=>document.getElementById('passInput').focus(),100); }
+function closePassModal(){ document.getElementById('modalPass').style.display='none'; }
+function checkPass(){ const v=document.getElementById('passInput').value; if(v===getAdminPass()){ closePassModal(); document.getElementById('modalAdmin').style.display='flex'; renderAdmin(); } else { alert('Clave incorrecta'); } }
+document.getElementById('passInput')?.addEventListener('keydown',(e)=>{ if(e.key==='Enter') checkPass(); });
+document.getElementById('logo').addEventListener('click', ()=>{ const now=Date.now(); if(now-lastTap>1000) taps=0; taps++; lastTap=now; if(taps>=5){ openPassModal(); taps=0; } });
+function closeAdmin(){ document.getElementById('modalAdmin').style.display='none'; renderCarousel(); renderHome(); renderOfertas(); }
+function setATab(t){ aTab=t; document.querySelectorAll('#modalAdmin .pill').forEach(p=>p.classList.remove('active')); const el=document.getElementById('at'+t.charAt(0).toUpperCase()+t.slice(1)); if(el) el.classList.add('active'); renderAdmin(); }
+function renderAdmin(){
+ const cont=document.getElementById('adminContent'); cont.innerHTML='';
+  if(aTab==='banners'){
+   cont.innerHTML='<h4>🎠 Banner - Edita qué se muestra</h4><p style="font-size:11px;color:#666;margin-bottom:8px">Activa con el check lo que quieres que se vea. Si quitas el check, no aparece ni el punto amarillo.</p>';
+   slides.forEach((s,i)=>{
+     if(typeof s.showPromo==='undefined') s.showPromo=!!s.promoText;
+     if(typeof s.showDiscount==='undefined') s.showDiscount=!!s.discount;
+     if(typeof s.showTitle==='undefined') s.showTitle=!!s.title;
+     if(typeof s.showSubtitle==='undefined') s.showSubtitle=!!s.subtitle;
+     const div=document.createElement('div'); div.className='adminCard';
+     div.innerHTML='<b>Slide '+(i+1)+'</b>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+s.promoText.replace(/"/g,'&quot;')+'" placeholder="1) PROMO ACTIVA - arriba izq" style="flex:1" oninput="slides['+i+'].promoText=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showPromo?'checked':'')+' onchange="slides['+i+'].showPromo=this.checked; renderAdmin();"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+s.discount.replace(/"/g,'&quot;')+'" placeholder="2) -20% - arriba der amarillo" style="flex:1" oninput="slides['+i+'].discount=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showDiscount?'checked':'')+' onchange="slides['+i+'].showDiscount=this.checked; renderAdmin();"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+s.title.replace(/"/g,'&quot;')+'" placeholder="3) Parrillada Completa - título grande" style="flex:1" oninput="slides['+i+'].title=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showTitle?'checked':'')+' onchange="slides['+i+'].showTitle=this.checked; renderAdmin();"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+s.subtitle.replace(/"/g,'&quot;')+'" placeholder="4) Para compartir - subtítulo pequeño" style="flex:1" oninput="slides['+i+'].subtitle=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showSubtitle?'checked':'')+' onchange="slides['+i+'].showSubtitle=this.checked; renderAdmin();"> Mostrar</label></div>'+
+       '<label style="font-size:10px;color:#666;margin-top:8px;display:block">Imagen URL - vista previa al escribir</label>'+
+       '<input value="'+s.image.replace(/"/g,'&quot;')+'" placeholder="https://i.imgur.com/....jpg" oninput="slides['+i+'].image=this.value; const t=document.getElementById(\'thumb'+i+'\'); if(t){t.src=this.value; t.style.display=\'block\';} const e=document.getElementById(\'err'+i+'\'); if(e){e.style.display=\'none\';}">'+
+       '<div style="margin-top:6px;background:#111;border-radius:8px;overflow:hidden;position:relative;height:80px"><img id="thumb'+i+'" src="'+s.image+'" style="width:100%;height:80px;object-fit:cover" onerror="this.style.display=\'none\'; document.getElementById(\'err'+i+'\').style.display=\'flex\';" onload="document.getElementById(\'err'+i+'\').style.display=\'none\'; this.style.display=\'block\';"><div id="err'+i+'" style="display:none;position:absolute;inset:0;background:#1a1a1a;color:#ff6b6b;align-items:center;justify-content:center;font-size:11px">⚠️ Link no carga</div></div>';
+     cont.appendChild(div);
+   });
+   const btn=document.createElement('button'); btn.className='btn btn-orange'; btn.textContent='💾 Guardar Banners'; btn.onclick=()=>{ saveAll(); alert('Banners guardados'); renderCarousel(); renderDomiCarousels(); }; cont.appendChild(btn);
+ }
+ else if(aTab==='platos'){
+   const customCatsForList=JSON.parse(localStorage.getItem('click_custom_cats')||'[]');
+   const allCatsForList=[...new Set([...dishes.map(d=>d.category), ...customCatsForList])].sort();
+   let catsHtml='<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'; 
+   allCatsForList.forEach(cat=>{ 
+     const safe=cat.replace(/'/g,"&#39;"); 
+     catsHtml+='<span style="background:#FFF;border:1px solid #E5E7EB;padding:6px 10px;border-radius:20px;font-size:12px;display:inline-flex;align-items:center;gap:6px">'+safe+' <button onclick="removeCategory(\''+safe+'\')" style="border:0;background:#FEE;color:#B00;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer">x</button></span>'; 
+   }); 
+   catsHtml+='</div>';
+   cont.innerHTML='<h4>Platos y Categorias</h4><p style="font-size:11px;color:#666">Toca la categoria en cada plato, no subas arriba. El boton Guardar esta arriba y abajo.</p>'+catsHtml+'<div style="display:flex;gap:6px;margin:8px 0"><input id="newCat" placeholder="Nueva categoria Ej: Bebidas"><button class="btn btn-dark" style="width:auto" onclick="const v=document.getElementById(\'newCat\').value.trim();if(v){let c=JSON.parse(localStorage.getItem(\'click_custom_cats\')||\'[]\');if(!c.includes(v)){c.push(v);localStorage.setItem(\'click_custom_cats\',JSON.stringify(c));renderAdmin();renderCategories();} document.getElementById(\'newCat\').value=\'\';}">Crear categoria</button></div>';
+   const saveTop=document.createElement('button'); saveTop.className='btn btn-orange'; saveTop.textContent='Guardar Todo (arriba)'; saveTop.onclick=()=>{ saveAll(); alert('Guardado'); renderHome(); renderCategories(); }; cont.appendChild(saveTop);
+   dishes.forEach((d,i)=>{
+     const div=document.createElement('div'); div.className='adminCard';
+     if(!d.whatsapp) d.whatsapp=d.telefono||'573001234567';
+     if(!d.telefono) d.telefono=d.whatsapp||'573001234567';
+     const sel=document.createElement('select'); sel.style.cssText='background:#FFF7ED;border:1px solid #FF6B00;font-weight:700;margin:4px 0;width:100%;padding:10px;border-radius:10px';
+     allCatsForList.forEach(cat=>{ const opt=document.createElement('option'); opt.value=cat; opt.textContent=cat; if(cat===d.category) opt.selected=true; sel.appendChild(opt); });
+     sel.onchange=()=>{ dishes[i].category=sel.value; };
+     const divInner=document.createElement('div');
+     divInner.innerHTML='<div style="display:flex;justify-content:space-between"><b>#'+d.id+' '+d.name.replace(/</g,'').replace(/>/g,'')+'</b><span style="font-size:10px;color:#888">'+d.restaurant.replace(/</g,'').replace(/>/g,'')+'</span></div>'+
+       '<label style="font-size:10px;color:#666">Restaurante Ej: Don Baco</label>'+
+       '<input value="'+d.restaurant.replace(/"/g,'&quot;')+'" list="restList" oninput="dishes['+i+'].restaurant=this.value">'+
+       '<label style="font-size:10px;color:#666">Plato / Bebida Ej: Cerveza Aguila</label>'+
+       '<input value="'+d.name.replace(/"/g,'&quot;')+'" oninput="dishes['+i+'].name=this.value">'+
+       '<div style="display:flex;gap:6px"><div style="flex:1"><label style="font-size:10px;color:#666">Precio</label><input type="number" value="'+d.price+'" oninput="dishes['+i+'].price=Number(this.value)"></div><div style="flex:1"><label style="font-size:10px;color:#666">WhatsApp 57+</label><input value="'+(d.whatsapp||'').replace(/"/g,'&quot;')+'" oninput="dishes['+i+'].whatsapp=this.value; dishes['+i+'].telefono=this.value"></div></div>'+
+       '<label style="font-size:10px;color:#666">Categoria - TOCA PARA ELEGIR</label>';
+     div.appendChild(divInner);
+     div.appendChild(sel);
+     const rest=document.createElement('div');
+     rest.innerHTML='<label style="font-size:10px;color:#666">Imagen URL</label><input value="'+d.image.replace(/"/g,'&quot;')+'" oninput="dishes['+i+'].image=this.value"><label style="font-size:10px;color:#666">Ingredientes</label><textarea rows="2" oninput="dishes['+i+'].ingredients=this.value">'+(d.ingredients||'')+'</textarea>'+
+       '<div style="display:flex;gap:6px;margin-top:8px"><button style="background:#0A2A4A;color:white;border:0;padding:6px 10px;border-radius:8px;flex:1" onclick="const copy=JSON.parse(JSON.stringify(dishes['+i+'])); copy.id=Date.now(); copy.name=copy.name+\' copia\'; dishes.splice('+(i+1)+',0,copy); renderAdmin();">Duplicar</button><button style="background:#FEE;color:#B00;border:0;padding:6px 10px;border-radius:8px" onclick="if(confirm(\'Eliminar?\')){dishes.splice('+i+',1);renderAdmin();}">Eliminar</button></div>'+
+       '<button style="background:#FF6B00;color:white;border:0;padding:8px;border-radius:8px;width:100%;margin-top:6px" onclick="saveAll(); renderHome(); alert(\'Guardado #'+d.id+'\')">Guardar este plato rapido</button>';
+     div.appendChild(rest);
+     cont.appendChild(div);
+   });
+   let dl=document.getElementById('restList'); if(!dl){ dl=document.createElement('datalist'); dl.id='restList'; cont.appendChild(dl); } dl.innerHTML=''; [...new Set(dishes.map(d=>d.restaurant))].forEach(r=>{ const o=document.createElement('option'); o.value=r; dl.appendChild(o); });
+   const add=document.createElement('button'); add.className='btn btn-dark'; add.textContent='Agregar Plato (usa ultimo restaurante y categoria)'; add.style.marginTop='12px'; add.onclick=()=>{ const last=dishes[dishes.length-1]; const rest=last?last.restaurant:'Don Baco'; const cat=last?last.category:(allCatsForList.includes('Bebidas')?'Bebidas':'Combos'); const wa=last? (last.whatsapp||'573001234567'):'573001234567'; dishes.push({id:Date.now(),restaurant:rest,name:'Nueva bebida',price:5000,ingredients:'',category:cat,image:'',schedule:defaultWeek,whatsapp:wa,telefono:wa}); renderAdmin(); }; cont.appendChild(add);
+   const save=document.createElement('button'); save.className='btn btn-orange'; save.style.marginTop='8px'; save.textContent='Guardar Todo (abajo)'; save.onclick=()=>{ saveAll(); alert('Guardado'); renderHome(); renderCategories(); }; cont.appendChild(save);
+ }
+ else if(aTab==='horarios'){
+   cont.innerHTML='<h4>🕒 Horarios Lun-Dom y Festivos + Interruptor Cierre</h4><p style="font-size:11px;color:#666;margin-bottom:8px">Si un restaurante te dice que no abre un día, usa el interruptor rojo 🔴 CERRADO HOY</p>';
+   dishes.forEach((d,i)=>{
+     const div=document.createElement('div'); div.className='adminCard';
+     const todayOpen = !d.cerradoHoy;
+     let html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;background:'+(todayOpen?'#DCFCE7':'#FEE2E2')+';padding:6px 8px;border-radius:8px"><div><b>'+d.restaurant+' - '+d.name+'</b><div style="font-size:10px">'+(todayOpen?'🟢 ABIERTO HOY':'🔴 CERRADO HOY - No deja pedir')+'</div></div><label style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:11px"><input type="checkbox" '+(todayOpen?'checked':'')+' onchange="dishes['+i+'].cerradoHoy=!this.checked; renderAdmin(); saveAll(); renderHome();" style="width:18px;height:18px"> ABIERTO</label></div>';
+     ['lunes','martes','miercoles','jueves','viernes','sabado','domingo','festivos'].forEach(day=>{
+       const sch=d.schedule[day];
+       html+='<div style="display:flex;gap:6px;align-items:center;margin:4px 0"><label style="width:70px;font-size:12px">'+day+'</label><input type="time" value="'+sch.open+'" style="width:90px" oninput="dishes['+i+'].schedule.'+day+'.open=this.value"><input type="time" value="'+sch.close+'" style="width:90px" oninput="dishes['+i+'].schedule.'+day+'.close=this.value"><label style="font-size:11px"><input type="checkbox" '+(sch.closed?'checked':'')+' onchange="dishes['+i+'].schedule.'+day+'.closed=this.checked"> Cerrado</label></div>';
+     });
+     div.innerHTML=html; cont.appendChild(div);
+   });
+   const save=document.createElement('button'); save.className='btn btn-orange'; save.textContent='💾 Guardar Horarios'; save.onclick=()=>{ saveAll(); alert('Horarios guardados'); renderHome(); }; cont.appendChild(save);
+ }
+ else if(aTab==='ofertas'){
+   cont.innerHTML='<h4>🔥 Ofertas 14+6</h4><div id="subAdminList"></div>';
+   const list=document.getElementById('subAdminList'); 
+   promos.forEach((p,i)=>{
+     const div=document.createElement('div'); div.className='adminCard';
+     const isComida = p.tipo==='comida';
+     div.innerHTML=`
+       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+         <b style="font-size:13px">#${i+1} ${isComida ? (p.promo||'Oferta Comida') : (p.oferta||'Oferta Comercio')}</b>
+         <label style="display:flex;gap:4px;align-items:center;font-size:11px"><input type="checkbox" ${p.activa?'checked':''} onchange="promos[${i}].activa=this.checked"> Activa</label>
+       </div>
+       <label style="font-size:10px;color:#666">Tipo</label>
+       <select onchange="promos[${i}].tipo=this.value; renderAdmin();" style="margin-bottom:4px">
+         <option value="comida" ${p.tipo==='comida'?'selected':''}>🍔 Comida / Plato en oferta</option>
+         <option value="comercio" ${p.tipo==='comercio'?'selected':''}>🏪 Comercio / Servicio</option>
+       </select>
+       ${isComida ? `
+         <label style="font-size:10px;color:#666">Título / Nombre del plato en oferta</label>
+         <input value="${(p.promo||'').replace(/"/g,'&quot;')}" placeholder="Ej: Combo Familiar, 2x1 Pizzas" oninput="promos[${i}].promo=this.value" style="margin-bottom:4px">
+         <label style="font-size:10px;color:#666">Nombre del restaurante</label>
+         <input value="${(p.restaurante||'').replace(/"/g,'&quot;')}" placeholder="Ej: El Rancho" oninput="promos[${i}].restaurante=this.value" style="margin-bottom:4px">
+         <div style="display:flex;gap:4px">
+           <div style="flex:1"><label style="font-size:10px;color:#666">Precio original</label><input type="number" value="${p.precioOrig||''}" placeholder="40000" oninput="promos[${i}].precioOrig=parseInt(this.value)||0"></div>
+           <div style="flex:1"><label style="font-size:10px;color:#666">Precio oferta</label><input type="number" value="${p.precioOferta||''}" placeholder="32000" oninput="promos[${i}].precioOferta=parseInt(this.value)||0"></div>
+           <div style="flex:1"><label style="font-size:10px;color:#666">Badge %</label><input value="${(p.badge||'').replace(/"/g,'&quot;')}" placeholder="-20% o 2x1" oninput="promos[${i}].badge=this.value"></div>
+         </div>
+              <label style="font-size:10px;color:#666;margin-top:4px;display:block">Imagen URL</label>
+         <input value="${(p.img||'').replace(/"/g,'&quot;')}" placeholder="https://i.imgur.com/....jpg" oninput="promos[${i}].img=this.value" style="margin-bottom:6px">
+              ` : `
+         <p style="font-size:11px;color:#0A2A4A;background:#FFF7ED;padding:8px;border-radius:8px;margin-bottom:8px">🏪 <b>Comercio con foto + textos encima</b><br>Sube foto del local y escribe los textos. Toca la tarjeta para ver todo organizado.</p>
+         <label style="font-size:10px;color:#666">Imagen del local (foto fondo)</label>
+         <input value="${(p.img||'').replace(/"/g,'&quot;')}" placeholder="https://i.imgur.com/....jpg" oninput="promos[${i}].img=this.value; const t=document.getElementById('cThumb${i}'); if(t){t.src=this.value; t.style.display='block';}" style="margin-bottom:4px">
+         <div style="background:#111;border-radius:8px;overflow:hidden;position:relative;height:120px;margin-bottom:6px"><img id="cThumb${i}" src="${p.img||''}" style="width:100%;height:120px;object-fit:cover;${p.img?'':'display:none'}" onerror="this.style.display='none'"><div style="position:absolute;inset:0;display:${p.img?'none':'flex'};align-items:center;justify-content:center;color:#888;font-size:11px">Sin imagen</div></div>
+         <div style="display:flex;gap:6px">
+           <div style="flex:1"><label style="font-size:10px;color:#666">[Arriba Izq] Ej: Este mes</label><input value="${(p.badgeIzq||'').replace(/"/g,'&quot;')}" placeholder="Este mes" oninput="promos[${i}].badgeIzq=this.value"></div>
+           <div style="flex:1"><label style="font-size:10px;color:#666">[Arriba Der] Ej: 15% Desc</label><input value="${(p.badgeDer||'').replace(/"/g,'&quot;')}" placeholder="15% Desc" oninput="promos[${i}].badgeDer=this.value"></div>
+         </div>
+         <label style="font-size:10px;color:#666;margin-top:4px;display:block">Título (ej: Barbería La Maquina)</label>
+         <input value="${(p.comercio||'').replace(/"/g,'&quot;')}" placeholder="Barbería La Maquina" oninput="promos[${i}].comercio=this.value" style="margin-bottom:4px">
+         <label style="font-size:10px;color:#666">Subtítulo amarillo (ej: Corte y barba)</label>
+         <input value="${(p.oferta||'').replace(/"/g,'&quot;')}" placeholder="Corte + Barba $12k" oninput="promos[${i}].oferta=this.value" style="margin-bottom:4px">
+         <label style="font-size:10px;color:#666">🕒 Horario (ej: L-S 8am-7pm D 10am-5pm)</label>
+         <input value="${(p.horarioCom||'').replace(/"/g,'&quot;')}" placeholder="L-S 8am-7pm D 10am-5pm" oninput="promos[${i}].horarioCom=this.value" style="margin-bottom:4px">
+         <label style="font-size:10px;color:#666">📝 Qué vende / Qué hace (ej: Tallas S-M-L, accesorios, relojes / Arroz, pastas, granos / Reparo PC, impresoras...)</label>
+         <textarea rows="2" placeholder="Ej: Tallas S-M-L, Blusas, accesorios, relojes, lentes..." oninput="promos[${i}].desc=this.value" style="margin-bottom:4px">${(p.desc||'').replace(/</g,'&lt;')}</textarea>
+         <label style="font-size:10px;color:#666">Teléfono para botón Llamar</label>
+         <input value="${(p.telefono||p.whatsapp||'').replace(/"/g,'&quot;')}" placeholder="573113225960" oninput="promos[${i}].telefono=this.value; promos[${i}].whatsapp=this.value" style="margin-bottom:4px">
+       `}
+       <button style="background:#FEE;color:#B00;border:0;padding:5px 8px;border-radius:6px;font-size:10px" onclick="if(confirm('¿Eliminar esta oferta?')){promos.splice(${i},1);renderAdmin();saveAll();renderOfertas();}">🗑️ Eliminar oferta</button>
+     `;
+     list.appendChild(div);
+   });
+   const addBtn=document.createElement('button'); addBtn.className='btn btn-dark'; addBtn.textContent='➕ Agregar oferta nueva'; addBtn.style.marginTop='8px';
+   addBtn.onclick=()=>{
+     promos.push({tipo:'comida', restaurante:'Nuevo Restaurante', promo:'Nueva Oferta', badge:'-20%', precioOrig:30000, precioOferta:24000, img:'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400', activa:true});
+     renderAdmin();
+   };
+   cont.appendChild(addBtn);
+   const btn=document.createElement('button'); btn.className='btn btn-orange'; btn.textContent='💾 Guardar Ofertas'; btn.style.marginTop='6px'; btn.onclick=()=>{ saveAll(); renderOfertas(); alert('Ofertas guardadas'); }; cont.appendChild(btn);
+ }
+ else if(aTab==='domi'){
+   cont.innerHTML='<h4>🏍️ Domicilios y mensajeros - Agregar/Quitar si hay quejas</h4>';
+   domiList.forEach((dm,i)=>{
+     const div=document.createElement('div'); div.className='adminCard';
+     div.innerHTML=`<b>#${dm.id} ${dm.nombre}</b><input value="${dm.nombre}" placeholder="Nombre: Héctor Pérez" oninput="domiList[${i}].nombre=this.value"><input value="${dm.telefono}" placeholder="Tel: 3101234567" oninput="domiList[${i}].telefono=this.value"><input value="${dm.horarioLV}" placeholder="L-V: 7am a 12pm" oninput="domiList[${i}].horarioLV=this.value"><input value="${dm.horarioSab}" placeholder="Sáb: 8am-6pm" oninput="domiList[${i}].horarioSab=this.value"><input value="${dm.horarioDom}" placeholder="Dom. Fest: 8am-10pm" oninput="domiList[${i}].horarioDom=this.value"><label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" ${dm.activo?'checked':''} onchange="domiList[${i}].activo=this.checked"> Activo</label><button style="background:#FEE;color:#B00;border:0;padding:6px 10px;border-radius:8px;margin-top:6px" onclick="if(confirm('¿Eliminar mensajero?')){domiList.splice(${i},1);renderAdmin();saveAll();renderDomi();}">🗑️ Eliminar</button>`;
+     cont.appendChild(div);
+   });
+   const add=document.createElement('button'); add.className='btn btn-dark'; add.textContent='➕ Agregar Domiciliario'; add.onclick=()=>{ domiList.push({id:Date.now(),nombre:'Nuevo Domi',telefono:'3001234567',horarioLV:'L-V: 7am a 12pm',horarioSab:'Sáb: 8am-6pm',horarioDom:'Dom. Fest: 8am-10pm',activo:true}); renderAdmin(); }; cont.appendChild(add);
+   const save=document.createElement('button'); save.className='btn btn-orange'; save.style.marginTop='8px'; save.textContent='💾 Guardar Domiciliarios'; save.onclick=()=>{ saveAll(); renderDomi(); alert('Domiciliarios guardados'); }; cont.appendChild(save);
+ }
+
+ else if(aTab==='domiBanners'){
+   cont.innerHTML='<h4>🖼️ Banner Domi - 2 banners diferentes (6 espacios)</h4><p style="font-size:11px;color:#666;margin-bottom:8px">Arriba 3 imágenes + Abajo 3 imágenes = 6 publicidades diferentes. No afecta el banner de Inicio.</p>';
+   function addHeader(text,color){
+     const h=document.createElement('h5'); h.style.cssText='margin:12px 0 6px;padding:8px 10px;background:'+color+';color:#0A2A4A;border-radius:8px;font-size:13px;font-weight:900'; h.textContent=text; cont.appendChild(h);
+   }
+   // ARRIBA
+   addHeader('🔝 Banner Arriba (1) - 3 imágenes','#FFD600');
+   domiBanners.forEach((s,i)=>{
+     if(typeof s.showPromo==='undefined') s.showPromo=!!s.promoText;
+     if(typeof s.showDiscount==='undefined') s.showDiscount=!!s.discount;
+     if(typeof s.showTitle==='undefined') s.showTitle=!!s.title;
+     if(typeof s.showSubtitle==='undefined') s.showSubtitle=!!s.subtitle;
+     const div=document.createElement('div'); div.className='adminCard';
+     div.innerHTML='<b>Arriba '+(i+1)+'</b>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.promoText||'').replace(/"/g,'&quot;')+'" placeholder="Badge izq Publicidad" style="flex:1" oninput="domiBanners['+i+'].promoText=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showPromo?'checked':'')+' onchange="domiBanners['+i+'].showPromo=this.checked"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.discount||'').replace(/"/g,'&quot;')+'" placeholder="Badge der" style="flex:1" oninput="domiBanners['+i+'].discount=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showDiscount?'checked':'')+' onchange="domiBanners['+i+'].showDiscount=this.checked"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.title||'').replace(/"/g,'&quot;')+'" placeholder="Título" style="flex:1" oninput="domiBanners['+i+'].title=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showTitle?'checked':'')+' onchange="domiBanners['+i+'].showTitle=this.checked"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.subtitle||'').replace(/"/g,'&quot;')+'" placeholder="Subtítulo" style="flex:1" oninput="domiBanners['+i+'].subtitle=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showSubtitle?'checked':'')+' onchange="domiBanners['+i+'].showSubtitle=this.checked"> Mostrar</label></div>'+
+       '<input value="'+(s.image||'').replace(/"/g,'&quot;')+'" placeholder="https://..." oninput="domiBanners['+i+'].image=this.value; const t=document.getElementById(\'topThumb'+i+'\'); if(t){t.src=this.value;}">'+
+       '<div style="margin-top:6px;background:#111;border-radius:8px;overflow:hidden;height:70px"><img id="topThumb'+i+'" src="'+(s.image||'')+'" style="width:100%;height:70px;object-fit:cover"></div>'+
+       '<button style="background:#FEE;color:#B00;border:0;padding:5px 8px;border-radius:6px;font-size:10px;margin-top:6px" onclick="if(confirm(\'Eliminar?\')){domiBanners.splice('+i+',1);renderAdmin();saveAll();renderDomiCarousels();}">🗑️ Eliminar</button>';
+     cont.appendChild(div);
+   });
+   const addTop=document.createElement('button'); addTop.className='btn btn-dark'; addTop.textContent='➕ Agregar Arriba'; addTop.onclick=()=>{ domiBanners.push({id:Date.now(),title:"Nuevo Arriba",subtitle:"Publicidad",discount:"PUBLI",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true}); renderAdmin(); }; cont.appendChild(addTop);
+   const sep=document.createElement('div'); sep.style.cssText='height:1px;background:#EEE;margin:16px 0'; cont.appendChild(sep);
+   // ABAJO
+   addHeader('🔽 Banner Abajo (2) - 3 imágenes','#DCFCE7');
+   domiBanners2.forEach((s,i)=>{
+     if(typeof s.showPromo==='undefined') s.showPromo=!!s.promoText;
+     if(typeof s.showDiscount==='undefined') s.showDiscount=!!s.discount;
+     if(typeof s.showTitle==='undefined') s.showTitle=!!s.title;
+     if(typeof s.showSubtitle==='undefined') s.showSubtitle=!!s.subtitle;
+     const div=document.createElement('div'); div.className='adminCard';
+     div.innerHTML='<b>Abajo '+(i+1)+'</b>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.promoText||'').replace(/"/g,'&quot;')+'" placeholder="Badge izq Publicidad" style="flex:1" oninput="domiBanners2['+i+'].promoText=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showPromo?'checked':'')+' onchange="domiBanners2['+i+'].showPromo=this.checked"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.discount||'').replace(/"/g,'&quot;')+'" placeholder="Badge der" style="flex:1" oninput="domiBanners2['+i+'].discount=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showDiscount?'checked':'')+' onchange="domiBanners2['+i+'].showDiscount=this.checked"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.title||'').replace(/"/g,'&quot;')+'" placeholder="Título" style="flex:1" oninput="domiBanners2['+i+'].title=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showTitle?'checked':'')+' onchange="domiBanners2['+i+'].showTitle=this.checked"> Mostrar</label></div>'+
+       '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input value="'+(s.subtitle||'').replace(/"/g,'&quot;')+'" placeholder="Subtítulo" style="flex:1" oninput="domiBanners2['+i+'].subtitle=this.value"><label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" '+(s.showSubtitle?'checked':'')+' onchange="domiBanners2['+i+'].showSubtitle=this.checked"> Mostrar</label></div>'+
+       '<input value="'+(s.image||'').replace(/"/g,'&quot;')+'" placeholder="https://..." oninput="domiBanners2['+i+'].image=this.value; const t=document.getElementById(\'botThumb'+i+'\'); if(t){t.src=this.value;}">'+
+       '<div style="margin-top:6px;background:#111;border-radius:8px;overflow:hidden;height:70px"><img id="botThumb'+i+'" src="'+(s.image||'')+'" style="width:100%;height:70px;object-fit:cover"></div>'+
+       '<button style="background:#FEE;color:#B00;border:0;padding:5px 8px;border-radius:6px;font-size:10px;margin-top:6px" onclick="if(confirm(\'Eliminar?\')){domiBanners2.splice('+i+',1);renderAdmin();saveAll();renderDomiCarousels();}">🗑️ Eliminar</button>';
+     cont.appendChild(div);
+   });
+   const addBot=document.createElement('button'); addBot.className='btn btn-dark'; addBot.textContent='➕ Agregar Abajo'; addBot.onclick=()=>{ domiBanners2.push({id:Date.now(),title:"Nuevo Abajo",subtitle:"Publicidad",discount:"PUBLI",promoText:"Publicidad",image:"https://images.unsplash.com/photo-1519125323398-675f0ddb6308?w=800",showPromo:true,showDiscount:true,showTitle:true,showSubtitle:true}); renderAdmin(); }; cont.appendChild(addBot);
+   const btn=document.createElement('button'); btn.className='btn btn-orange'; btn.textContent='💾 Guardar Ambos Banners Domi (6 espacios)'; btn.style.marginTop='12px'; btn.onclick=()=>{ saveAll(); alert('Banners Domi guardados: '+domiBanners.length+' arriba + '+domiBanners2.length+' abajo'); renderDomiCarousels(); }; cont.appendChild(btn);
+ }
+ else if(aTab==='clave'){
+   const actual=getAdminPass();
+   cont.innerHTML=`<h4>🔑 Cambiar clave Admin</h4><div class="adminCard"><label>Clave actual: <b>${actual}</b></label><input id="newPass1" type="password" placeholder="Nueva clave (mín 4 caracteres)"><input id="newPass2" type="password" placeholder="Repite nueva clave"><button class="btn btn-orange" style="margin-top:8px" onclick="const p1=document.getElementById('newPass1').value; const p2=document.getElementById('newPass2').value; if(p1.length<4){alert('Mínimo 4 caracteres');return;} if(p1!==p2){alert('No coinciden');return;} localStorage.setItem('click_admin_pass',p1); alert('Clave cambiada a: '+p1); renderAdmin();">💾 Guardar nueva clave</button><p style="font-size:11px;color:#888;margin-top:8px">Si olvidas la clave, borra 'click_admin_pass' en localStorage o dale Restaurar App y volverá a Click123</p></div>`;
+ }
+}
+
+function updateDateTime(){ const now=new Date(); const dias=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']; document.getElementById('dateText').textContent=dias[now.getDay()]+' '+now.getDate()+' '+meses[now.getMonth()]; let h=now.getHours(); const m=String(now.getMinutes()).padStart(2,'0'); const ampm=h>=12?'PM':'AM'; h=h%12||12; document.getElementById('timeText').textContent=h+':'+m+' '+ampm; }
+setInterval(updateDateTime, 60000); updateDateTime();
+
+function getTodayDayName(){
+  const dias=['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+  const now=new Date();
+  return dias[now.getDay()];
+}
+function isDishOpen(d){
+  try{
+    if(d.cerradoHoy) return {open:false, reason:'CERRADO HOY'};
+    const dayName=getTodayDayName();
+    const sch=d.schedule ? d.schedule[dayName] : null;
+    if(!sch) return {open:true, reason:''};
+    if(sch.closed) return {open:false, reason:'CERRADO'};
+    // check time if open/close present
+    if(sch.open && sch.close){
+      const now=new Date();
+      const [oh, om] = sch.open.split(':').map(n=>parseInt(n)||0);
+      const [ch, cm] = sch.close.split(':').map(n=>parseInt(n)||0);
+      const nowMin = now.getHours()*60 + now.getMinutes();
+      const openMin = oh*60 + om;
+      const closeMin = ch*60 + cm;
+      // handle overnight close (e.g., 22:00 to 02:00)
+      if(closeMin < openMin){
+        if(nowMin < openMin && nowMin > closeMin) return {open:false, reason:'CERRADO'};
+      } else {
+        if(nowMin < openMin || nowMin > closeMin) return {open:false, reason:'CERRADO'};
+      }
+    }
+    return {open:true, reason:'ABIERTO'};
+  }catch(e){ return {open:true, reason:''}; }
+}
+
+
+
+let cIdx=0; setInterval(()=>{ const car=document.getElementById('carousel'); if(car){ const slidesEls=car.querySelectorAll('.slide'); const dots=car.querySelectorAll('.dot'); if(slidesEls.length>0){ slidesEls[cIdx%slidesEls.length]?.classList.remove('active'); dots[cIdx%slidesEls.length]?.classList.remove('active'); cIdx=(cIdx+1)%slidesEls.length; slidesEls[cIdx]?.classList.add('active'); dots[cIdx]?.classList.add('active'); } } ['domiCarousel1','domiCarousel2'].forEach(cid=>{ const c=document.getElementById(cid); if(!c) return; const s=c.querySelectorAll('.slide'); const d=c.querySelectorAll('.dot'); if(s.length===0) return; let idx=parseInt(c.dataset.idx||'0'); s[idx]?.classList.remove('active'); d[idx]?.classList.remove('active'); idx=(idx+1)%s.length; c.dataset.idx=idx; s[idx]?.classList.add('active'); d[idx]?.classList.add('active'); }); }, 3500);
+
+function exportHostingFile(){
+  try{
+    // Tomar HTML actual completo
+    let html = document.documentElement.outerHTML;
+    // Asegurar DOCTYPE
+    html = '<!DOCTYPE html>\n' + html;
+    // Reemplazar defaults con datos actuales
+    const replaceDefault = (name, data) => {
+      const json = JSON.stringify(data, null, 1);
+      const re = new RegExp(`const ${name}=\\[[\\s\\S]*?\\];`);
+      html = html.replace(re, `const ${name}=${json};`);
+    };
+    replaceDefault('defaultSlides', slides);
+    replaceDefault('defaultDishes', dishes);
+    replaceDefault('defaultPromos', promos);
+    replaceDefault('defaultDomi', domiList);
+    replaceDefault('defaultDomiBanners', domiBanners);
+    replaceDefault('defaultDomiBanners2', domiBanners2);
+    // Reemplazar clave por defecto
+    const currentPass = getAdminPass();
+    html = html.replace(/return localStorage\.getItem\('click_admin_pass'\)\|\|'.*?'/, `return localStorage.getItem('click_admin_pass')||'${currentPass.replace(/'/g,"\\'")}'`);
+    // Reemplazar custom cats en localStorage inicial - inyectar en window.onload
+    const customCats = localStorage.getItem('click_custom_cats')||'[]';
+    // Crear blob y descargar
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    // Guardar custom cats aparte como recordatorio
+    alert('✅ Archivo index.html generado con:\n- '+slides.length+' banners\n- '+dishes.length+' platos\n- '+promos.length+' ofertas\n- '+domiList.length+' domiciliarios\n\nSúbelo a Netlify/hosting. Todos verán los cambios.');
+  }catch(e){ alert('Error al generar: '+e.message); }
+}
+
+document.getElementById('search').addEventListener('input', ()=>renderHome());
+
+window.addEventListener('load',()=>{
+  try{
+    const ls=document.getElementById('logo')?.src||'';
+    const sl=document.getElementById('splashLogo');
+    if(sl&&ls) sl.src=ls;
+  }catch(e){}
+  const bar=document.getElementById('splashBar');
+  if(bar) setTimeout(()=>bar.style.width='100%',50);
+  setTimeout(()=>{
+    const s=document.getElementById('splash');
+    if(s){s.style.opacity='0'; setTimeout(()=>s.remove(),400);}
+  },1200);
+});
+
+
+
+// Migracion show flags para banners existentes
+slides.forEach(s=>{ if(typeof s.showPromo==='undefined') s.showPromo=!!s.promoText; if(typeof s.showDiscount==='undefined') s.showDiscount=!!s.discount; if(typeof s.showTitle==='undefined') s.showTitle=!!s.title; if(typeof s.showSubtitle==='undefined') s.showSubtitle=!!s.subtitle; });
+
+// Migrar campo cerradoHoy si no existe
+dishes.forEach(d=>{ if(typeof d.cerradoHoy==='undefined') d.cerradoHoy=false; });
+
+window.onload=()=>{ renderCarousel(); renderCategories(); renderHome(); renderOfertas(); renderDomi(); updateBadge(); renderCarrito(); };
+</script>
+</body>
+</html>
